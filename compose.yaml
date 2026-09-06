@@ -1,0 +1,44 @@
+services:
+  app:
+    image: logistics-os:local
+    build: .
+    entrypoint: ["/bin/sh", "-ec"]
+    command: ["/app/logistics-os migrate && unset MIGRATION_DATABASE_URL && exec /app/logistics-os serve"]
+    environment:
+      DATABASE_URL: postgres://logistics_app:${APP_DB_PASSWORD:?Set APP_DB_PASSWORD in .env}@postgres:5432/logistics?sslmode=disable
+      MIGRATION_DATABASE_URL: postgres://logistics_owner:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/logistics?sslmode=disable
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/logistics-os", "probe"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    cpus: 1
+    mem_limit: 512m
+    stop_grace_period: 10s
+  postgres:
+    image: postgres:18.4-alpine3.23
+    environment:
+      POSTGRES_DB: logistics
+      POSTGRES_USER: logistics_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Set APP_DB_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logistics_owner -d logistics"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    cpus: 1
+    mem_limit: 2g
+volumes:
+  postgres_data:

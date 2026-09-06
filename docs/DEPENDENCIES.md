@@ -1,0 +1,15 @@
+# S0 dependency decisions
+
+S0 adds the agreed stack only, with test/contract tooling. No project license is selected here. Upstream license metadata is recorded in the machine-readable inventory and must be reviewed against the maintainer's eventual project license before release.
+
+- Go 1.27.1: pinned compiler; standard net/http, embed, crypto/sha256 and testing avoid a server framework, asset server, migration framework, and test assertion library.
+- pgx v5.10.0 (MIT): agreed PostgreSQL driver and bounded pool. The standard library has no PostgreSQL driver. Alternatives database/sql still need a driver; an ORM is excluded. Its module graph is recorded, including upstream test dependencies separately from application imports.
+- sqlc v1.31.1 (MIT): agreed development generator for schema-history reads. Transactional migration orchestration uses explicit SQL directly; no generated file is edited by hand. A generator is preferable to a custom query abstraction. No sqlc runtime is shipped.
+- Svelte 5.57.0 (MIT), Vite 8.2.2 (MIT), TypeScript 6.0.3 (Apache-2.0), vite-plugin-svelte 7.3.0 (MIT), svelte-check 4.7.6 (MIT): agreed frontend compiler/build/typechecking chain. TypeScript 7.0.2 was rejected because svelte-check's declared peers support 5/6. No UI kit, router, state package, icon pack, font, CDN or client business library is added.
+- Playwright test 1.63.0 (Apache-2.0), development only: needed for production-browser interaction, error/loading and actual network asset accounting required by PERFORMANCE_BUDGET.md. HTTP-only tests cannot establish these browser properties. Chromium is test infrastructure, never a production service.
+- Redocly CLI 2.51.2 (MIT), development only: validates the OpenAPI contract. A handwritten YAML/schema validator would duplicate a specification implementation. Its transitive cost is development-only and captured separately.
+- Node 24.20.0 is build/test only. PostgreSQL 18.4 and Alpine 3.23.4 images are version-pinned; Go/Node build images are version-pinned. Image availability and security scanning are CI gates; version tags are not immutable digests.
+
+These are maintained upstream projects, not a claim that any version is vulnerability-free. CI runs npm audit, govulncheck and a container scan; high/critical findings block release. Inventories include direct/transitive counts and npm license metadata. Size measurements are emitted from production builds; controlled-runner timing/RAM and compressed image transfer measurements remain explicitly pending until measured. There is no accepted previous size baseline at S0, so >10% regression comparison begins after acceptance of measured S0 results.
+
+Inventory additions are reviewed through this file and docs/dependencies.json. Regenerate with `node scripts/inventory.mjs --write` after lockfile/module changes, then review the full diff; never update a baseline solely to silence a failure.

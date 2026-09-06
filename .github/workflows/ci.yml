@@ -1,0 +1,92 @@
+name: S0 checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      test-postgres:
+        image: postgres:18.4-alpine3.23
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test-ci-only
+          POSTGRES_DB: migration_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d migration_test"
+          --health-interval 2s --health-timeout 2s --health-retries 30
+    env:
+      TEST_DATABASE_URL: postgres://test:test-ci-only@127.0.0.1:5432/migration_test?sslmode=disable
+      POSTGRES_PASSWORD: ci-owner-disposable-only
+      APP_DB_PASSWORD: ci-app-disposable-only
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-go@v6.0.0
+        with:
+          go-version: '1.27.1'
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: '24.20.0'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Dependencies and frontend
+        run: |
+          npm --prefix web ci
+          npm --prefix web run check
+          npm --prefix web run build
+          go mod download
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum web/package-lock.json
+      - name: SQL generation, code, contracts and inventories
+        run: |
+          go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
+          sqlc generate
+          git diff --exit-code -- internal/platform/platformdb
+          test -z "$(gofmt -l cmd internal db/migrations/embed.go web/embed.go)"
+          go vet ./...
+          go test -race ./...
+          node scripts/links.mjs
+          node scripts/inventory.mjs
+          web/node_modules/.bin/redocly lint api/openapi.yaml
+      - name: Fresh deployment and failure paths
+        run: sh scripts/compose-smoke.sh
+      - name: Production browser and deterministic budgets
+        run: |
+          cd web
+          npx --no-install playwright install --with-deps chromium
+          npx --no-install playwright test
+          cd ..
+          node scripts/budgets.mjs --image
+      - name: Dependency vulnerability checks
+        run: |
+          npm --prefix web audit --audit-level=high --json > reports/npm-audit.json
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          govulncheck -json ./... > reports/govulncheck.json
+      - name: Runtime image security scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: logistics-os:local
+          format: json
+          output: reports/image-scan.json
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+      - name: Logs
+        if: always()
+        run: |
+          mkdir -p reports
+          docker compose logs --no-color > reports/compose.log
+          docker compose ps > reports/compose-status.txt
+      - uses: actions/upload-artifact@v4.6.2
+        if: always()
+        with:
+          name: s0-evidence-${{ github.sha }}
+          path: reports/
+      - name: Stop disposable CI deployment
+        if: always()
+        run: docker compose down --volumes
