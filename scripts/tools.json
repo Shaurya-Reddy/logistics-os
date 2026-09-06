@@ -2,7 +2,7 @@
   "go": "1.27.1",
   "node": "24.20.0",
   "sqlc": "1.31.1",
-  "govulncheck": "1.1.4",
+  "govulncheck": "1.7.0",
   "postgresImage": "postgres:18.4-alpine3.23",
   "runtimeImage": "alpine:3.23.4"
 }

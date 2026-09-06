@@ -66,7 +66,7 @@ jobs:
       - name: Dependency vulnerability checks
         run: |
           npm --prefix web audit --audit-level=high --json > reports/npm-audit.json
-          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
           govulncheck -json ./... > reports/govulncheck.json
       - name: Runtime image security scan
         uses: aquasecurity/trivy-action@v0.36.0
