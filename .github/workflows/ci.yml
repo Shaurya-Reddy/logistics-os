@@ -1,0 +1,75 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: logistics_os
+          POSTGRES_USER: logistics
+          POSTGRES_PASSWORD: logistics_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U logistics -d logistics_os"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: npm
+          cache-dependency-path: web/package.json
+
+      - name: Go format
+        run: test -z "$(gofmt -l cmd internal)"
+
+      - name: Go vet and tests
+        env:
+          DATABASE_URL: postgres://logistics:logistics_dev@127.0.0.1:5432/logistics_os?sslmode=disable
+        run: |
+          go mod download
+          go vet ./...
+          go test ./...
+
+      - name: Migration smoke test
+        env:
+          DATABASE_URL: postgres://logistics:logistics_dev@127.0.0.1:5432/logistics_os?sslmode=disable
+        run: go run ./cmd/logistics-os migrate
+
+      - name: Frontend checks
+        working-directory: web
+        run: |
+          npm install --ignore-scripts
+          npm run check
+          npm run build
+
+      - name: Verify mandatory service count
+        run: |
+          count=$(docker compose config --services | wc -l | tr -d ' ')
+          test "$count" = "2"
+
+      - name: Build production image
+        run: docker build -t logistics-os:ci .
+
+      - name: Check runtime image size
+        run: |
+          size=$(docker image inspect logistics-os:ci --format '{{.Size}}')
+          echo "runtime_image_bytes=$size"
+          test "$size" -le 100000000

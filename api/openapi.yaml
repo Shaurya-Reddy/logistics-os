@@ -1,0 +1,44 @@
+openapi: 3.1.0
+info:
+  title: Logistics OS API
+  version: 0.0.1
+paths:
+  /health:
+    get:
+      summary: Process liveness
+      responses:
+        '200':
+          description: Application process is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+  /ready:
+    get:
+      summary: Database readiness
+      responses:
+        '200':
+          description: Application and database are ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+        '503':
+          description: Database is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+components:
+  schemas:
+    SystemStatus:
+      type: object
+      properties:
+        status:
+          type: string
+        version:
+          type: string
+        database:
+          type: string
+      required:
+        - status
