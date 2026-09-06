@@ -55,22 +55,22 @@
     },
     {
       "path": "golang.org/x/mod",
-      "version": "v0.27.0",
+      "version": "v0.37.0",
       "direct": false
     },
     {
       "path": "golang.org/x/sync",
-      "version": "v0.17.0",
+      "version": "v0.21.0",
       "direct": false
     },
     {
       "path": "golang.org/x/text",
-      "version": "v0.29.0",
+      "version": "v0.39.0",
       "direct": false
     },
     {
       "path": "golang.org/x/tools",
-      "version": "v0.36.0",
+      "version": "v0.47.0",
       "direct": false
     },
     {
