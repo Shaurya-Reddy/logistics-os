@@ -4,5 +4,6 @@
   "sqlc": "1.31.1",
   "govulncheck": "1.7.0",
   "postgresImage": "postgres:18.4-alpine3.23",
-  "runtimeImage": "alpine:3.23.4"
+  "runtimeImage": "alpine:3.23.5",
+  "runtimeOpenSSL": "3.5.8-r0"
 }
