@@ -1,0 +1,49 @@
+openapi: 3.0.3
+info:
+  title: Logistics OS operational endpoints
+  version: 0.0.0
+  description: S0 operational contract. Business resources will use /api/v1 in later milestones.
+servers:
+  - url: /
+security: []
+paths:
+  /health:
+    get:
+      operationId: health
+      summary: Process liveness without a database dependency
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok] }
+  /ready:
+    get:
+      operationId: ready
+      summary: Database connectivity and complete compatible migration history
+      responses:
+        '200':
+          description: Ready to serve
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ready] }
+        '503':
+          description: Database unavailable or incompatible; no sensitive diagnostics
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status: { type: string, enum: [unavailable] }

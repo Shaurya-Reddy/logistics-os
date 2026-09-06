@@ -1,0 +1,21 @@
+# S0 dependency decisions
+
+S0 adds the agreed stack only, with test/contract tooling. No project license is selected here. Upstream license metadata is recorded in the machine-readable inventory and must be reviewed against the maintainer's eventual project license before release.
+
+- Go 1.27.1: pinned compiler; standard net/http, embed, crypto/sha256 and testing avoid a server framework, asset server, migration framework, and test assertion library.
+- pgx v5.10.0 (MIT): agreed PostgreSQL driver and bounded pool. The standard library has no PostgreSQL driver. Alternatives database/sql still need a driver; an ORM is excluded. Its module graph is recorded, including upstream test dependencies separately from application imports.
+- sqlc v1.31.1 (MIT): agreed development generator for schema-history reads. Transactional migration orchestration uses explicit SQL directly; no generated file is edited by hand. A generator is preferable to a custom query abstraction. No sqlc runtime is shipped.
+- Svelte 5.57.0 (MIT), Vite 8.2.2 (MIT), TypeScript 6.0.3 (Apache-2.0), vite-plugin-svelte 7.3.0 (MIT), svelte-check 4.7.6 (MIT): agreed frontend compiler/build/typechecking chain. TypeScript 7.0.2 was rejected because svelte-check's declared peers support 5/6. No UI kit, router, state package, icon pack, font, CDN or client business library is added.
+- Playwright test 1.63.0 (Apache-2.0), development only: needed for production-browser interaction, error/loading and actual network asset accounting required by PERFORMANCE_BUDGET.md. HTTP-only tests cannot establish these browser properties. Chromium is test infrastructure, never a production service.
+- Redocly CLI 2.51.2 (MIT), development only: validates the OpenAPI contract. A handwritten YAML/schema validator would duplicate a specification implementation. Its transitive cost is development-only and captured separately.
+- Node 24.20.0 is build/test only. PostgreSQL 18.4 and Alpine 3.23.5 images are version-pinned; Go/Node build images are version-pinned. Image availability and security scanning are CI gates; version tags are not immutable digests.
+
+These are maintained upstream projects, not a claim that any version is vulnerability-free. CI runs npm audit, govulncheck and a container scan; high/critical findings block release. Inventories include direct/transitive counts and npm license metadata. Size measurements are emitted from production builds; controlled-runner timing/RAM and compressed image transfer measurements remain explicitly pending until measured. There is no accepted previous size baseline at S0, so >10% regression comparison begins after acceptance of measured S0 results.
+
+Inventory additions are reviewed through this file and docs/dependencies.json. Regenerate with `node scripts/inventory.mjs --write` after lockfile/module changes, then review the full diff; never update a baseline solely to silence a failure.
+
+S0 security follow-up: govulncheck reported GO-2026-5970 through pgx's use of golang.org/x/text v0.29.0. Pin x/text v0.39.0, the reported fixed version. Its module requirements also select x/sync v0.21.0 and update upstream development modules x/mod and x/tools; regenerate and review the full graph. This changes versions of existing modules without adding a direct dependency or changing frontend assets. The Trivy action is pinned to the verified release tag v0.36.0; the earlier tag lacked a valid release. Re-run vulnerability and runtime checks before accepting these changes.
+
+The initial govulncheck v1.1.4 crashed in its Go SSA parser on the Linux Go 1.27.1 CI build. Upgrade the development-only scanner to v1.7.0 (Go team's supported release, BSD-3-Clause), preserving source-level vulnerability analysis. Disabling the scan or reducing it to dependency-name matching would lose coverage. This scanner never enters the application module graph or runtime image.
+
+Container scan follow-up: the original Alpine image retained libcrypto3/libssl3 3.5.6-r0, flagged for CVE-2026-14456 and CVE-2026-45447. Use the available Alpine 3.23.5 patch image and explicitly upgrade these existing packages to 3.5.8-r0, verified in Alpine's v3.23 x86_64 package index. OpenSSL retains its Apache-2.0 license; no new runtime service or application library is introduced. Keep the high/critical container scan blocking and remeasure image size.
