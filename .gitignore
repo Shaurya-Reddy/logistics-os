@@ -1,0 +1,17 @@
+# Go
+/logistics-os
+*.test
+
+# Frontend
+web/node_modules/
+web/dist/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
